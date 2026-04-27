@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cold">
+<meta name="theme-color" content="#0a0a0a">
+<title>Cold Responses</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0a0a0a; --surface: #111111; --border: #1e1e1e;
+    --text: #e8e8e8; --muted: #555; --accent: #c8ff00; --danger: #ff3b3b;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow-x: hidden; }
+  .grain { position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.4; }
+  .container { width: 100%; max-width: 540px; position: relative; z-index: 1; }
+  #keyScreen { display: block; text-align: center; }
+  #keyScreen h2 { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  #keyScreen p { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+  #keyScreen p a { color: var(--accent); text-decoration: none; }
+  .key-input-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; text-align: left; }
+  .input-label { font-size: 10px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  input[type="password"], textarea { width: 100%; background: transparent; border: none; outline: none; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; line-height: 1.5; }
+  input[type="password"]::placeholder, textarea::placeholder { color: #333; }
+  .notice { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-align: center; margin-bottom: 16px; line-height: 1.6; }
+  .btn { width: 100%; padding: 16px; background: var(--accent); color: #000; border: none; border-radius: 10px; font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; letter-spacing: 0.05em; cursor: pointer; transition: all 0.15s; text-transform: uppercase; }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { background: #2a2a2a; color: #444; cursor: not-allowed; transform: none; }
+  #mainScreen { display: none; }
+  .settings-bar { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+  .settings-btn { background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; cursor: pointer; text-transform: uppercase; padding: 4px 0; }
+  .tag { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; color: var(--accent); text-transform: uppercase; margin-bottom: 6px; }
+  h1 { font-size: 48px; font-weight: 800; line-height: 1; letter-spacing: -2px; color: var(--text); margin-bottom: 8px; }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; font-weight: 300; margin-bottom: 32px; }
+  .input-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  textarea { font-family: 'Syne', sans-serif; font-size: 15px; resize: none; min-height: 80px; line-height: 1.6; }
+  .output-section { margin-top: 18px; opacity: 0; transform: translateY(8px); transition: all 0.3s ease; }
+  .output-section.visible { opacity: 1; transform: translateY(0); }
+  .response-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; margin-bottom: 10px; position: relative; cursor: pointer; transition: border-color 0.2s; }
+  .response-card:active { transform: scale(0.99); }
+  .response-card.copied { border-color: var(--accent); }
+  .response-num { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 8px; }
+  .response-text { font-size: 15px; line-height: 1.5; color: var(--text); padding-right: 80px; }
+  .copy-hint { position: absolute; top: 16px; right: 14px; font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+  .response-card.copied .copy-hint { color: var(--accent); }
+  .loading { text-align: center; padding: 28px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.2em; }
+  .dot { display: inline-block; animation: blink 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+  .error { background: #1a0a0a; border: 1px solid #3b1111; border-radius: 10px; padding: 14px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--danger); line-height: 1.6; }
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="container">
+  <div id="keyScreen">
+    <h2>🔑 API Key</h2>
+    <p>Einmalig eingeben — wird lokal gespeichert.<br>
+    Hol dir einen auf <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a></p>
+    <div class="key-input-wrap">
+      <div class="input-label">Anthropic API Key</div>
+      <input type="password" id="keyInput" placeholder="sk-ant-..." autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <p class="notice">🔒 Nur lokal auf deinem Gerät gespeichert.</p>
+    <button class="btn" onclick="saveKey()">Speichern & Starten</button>
+  </div>
+  <div id="mainScreen">
+    <div class="settings-bar">
+      <button class="settings-btn" onclick="resetKey()">⚙ Key ändern</button>
+    </div>
+    <div class="tag">// KI-Tool</div>
+    <h1>COLD<br><span>RESPONSES</span></h1>
+    <p class="subtitle">nachricht eingeben → 3 eiskalte antworten</p>
+    <div class="input-section">
+      <div class="input-label">Die Nachricht</div>
+      <textarea id="msgInput" placeholder='z.B. "Magst du mich?" oder "Warum antwortest du nicht?"' rows="3"></textarea>
+    </div>
+    <button class="btn" id="generateBtn" onclick="generate()">Generieren</button>
+    <div class="output-section" id="output"></div>
+  </div>
+</div>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  window.addEventListener('load', () => {
+    if (localStorage.getItem('anthropic_key')) showMain();
+    else showKeyScreen();
+  });
+  function showKeyScreen() {
+    document.getElementById('keyScreen').style.display = 'block';
+    document.getElementById('mainScreen').style.display = 'none';
+  }
+  function showMain() {
+    document.getElementById('keyScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+  }
+  function saveKey() {
+    const key = document.getElementById('keyInput').value.trim();
+    if (!key.startsWith('sk-ant-')) { alert('Key muss mit sk-ant- anfangen.'); return; }
+    localStorage.setItem('anthropic_key', key);
+    showMain();
+  }
+  function resetKey() {
+    localStorage.removeItem('anthropic_key');
+    document.getElementById('keyInput').value = '';
+    showKeyScreen();
+  }
+  async function generate() {
+    const msg = document.getElementById('msgInput').value.trim();
+    if (!msg) return;
+    const btn = document.getElementById('generateBtn');
+    const output = document.getElementById('output');
+    btn.disabled = true;
+    btn.textContent = 'Generiert...';
+    output.innerHTML = '<div class="loading"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>';
+    output.classList.add('visible');
+    try {
+      const res = await fetch('/.netlify/functions/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg })
+      });
+      const data = await res.json();
+      const text = data.content[0].text.trim();
+      const responses = JSON.parse(text);
+      output.innerHTML = responses.map((r, i) => `
+        <div class="response-card" id="card-${i}" onclick="copyText(${i}, this.dataset.text)" data-text="${r.replace(/"/g, '&quot;')}">
+          <div class="response-num">Option ${i + 1}</div>
+          <div class="response-text">${r}</div>
+          <div class="copy-hint">tippen = kopieren</div>
+        </div>`).join('');
+    } catch(e) {
+      output.innerHTML = '<div class="error">❌ Fehler. Nochmal versuchen.</div>';
+    }
+    btn.disabled = false;
+    btn.textContent = 'Generieren';
+  }
+  function copyText(idx, text) {
+    navigator.clipboard.writeText(text).then(() => {
+      const card = document.getElementById('card-' + idx);
+      card.classList.add('copied');
+      card.querySelector('.copy-hint').textContent = '✓ kopiert';
+      setTimeout(() => { card.classList.remove('copied'); card.querySelector('.copy-hint').textContent = 'tippen = kopieren'; }, 1800);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    const ta = document.getElementById('msgInput');
+    if (ta) ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generate(); } });
+  });
+</script>
+</body>
+</html>
